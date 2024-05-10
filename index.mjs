@@ -89,7 +89,8 @@ app.get('/set-spreadsheet-range', async(req, res) => {
 app.get('/spreadsheet-data', async(req, res) => {
     try {
         const data = await readSheet();  // Assuming data comes as an array of arrays
-        res.status(200).json({ data });
+        const processed = processSpreadsheetData(data);
+        res.status(200).json({ data: processed });
     } catch (error) {
         res.status(500).json({ error: 'Failed to read the sheet', details: error.message });
     }
@@ -147,6 +148,47 @@ async function readSheet() {
     }
 }
 
+function processSpreadsheetData(spreadsheetData){
+    if(!Array.isArray(spreadsheetData))
+        throw new Error('data is not an array while processing spreadsheet data');
+
+    const newDataArr = []
+
+    for(const row of spreadsheetData){
+        const date = new Date(row[0])
+        const isValidDate = !isNaN(date);
+
+        if(!isValidDate){
+            continue;
+        }
+
+        const meziNames = []
+
+        const mezi_person_count_start = 1;
+        for(let i = mezi_person_count_start; i < data.maxPersonCountMezi + mezi_person_count_start; i++){
+            const meziName = row[i];
+            if(meziName)
+                meziNames.push(meziName);
+        }
+
+        const doborgazNames = []
+
+        const doborgaz_person_count_start = 1 + data.maxPersonCountMezi;
+        for (let i = doborgaz_person_count_start; i < data.maxPersonCountDoborgaz + doborgaz_person_count_start; i++) {
+            const doborgazName = row[i];
+            if(doborgazName)
+                doborgazNames.push(doborgazName);
+        }
+
+        newDataArr.push({
+            date: date,
+            cikola: meziNames,
+            doborgaz: doborgazNames
+        });
+    }
+
+    return newDataArr
+}
 
 app.listen(PORT, () => console.log(`Server running`));
 
@@ -169,14 +211,21 @@ function writeDataToFile(data){
 }
 
 function readFileToData() {
+    const defaultObj = {
+        tokens: undefined,
+        spreadsheetId: process.env.SPREADSHEET_ID,
+        spreadsheetRange: process.env.SPREADSHEET_RANGE,
+        maxPersonCountMezi: parseInt(process.env.DATA_MEZI_MAX_PERSON),
+        maxPersonCountDoborgaz: parseInt(process.env.DATA_DOBORGAZ_MAX_PERSON),
+    }
+
     if(!existsSync(process.env.FILE_TO_SAVE_TOKENS)){
-        return {
-            tokens: undefined,
-            spreadsheetId: process.env.SPREADSHEET_ID,
-            spreadsheetRange: process.env.SPREADSHEET_RANGE,
-        }
+        return defaultObj
     }
 
     const string = readFileSync(process.env.FILE_TO_SAVE_TOKENS).toString();
-    return JSON.parse(string);
+    return {
+        ...defaultObj,
+        ...JSON.parse(string)
+    };
 }

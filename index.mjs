@@ -1,8 +1,6 @@
 // Import the necessary modules
 import { google } from 'googleapis';
 import express from 'express';
-import open from 'open';
-import fs from 'fs';
 import {config} from 'dotenv'
 
 config()
@@ -32,8 +30,7 @@ app.get('/auth', (req, res) => {
         state: 'state-123'
     });
 
-    open(authUrl);
-    res.send('Authentication started...');
+    res.redirect(authUrl)
 });
 
 // Handle the OAuth2 callback

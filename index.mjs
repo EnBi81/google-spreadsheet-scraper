@@ -1,5 +1,5 @@
 // Import the necessary modules
-import { google } from 'googleapis';
+import {google} from 'googleapis';
 import express from 'express';
 import {config} from 'dotenv'
 
@@ -23,7 +23,8 @@ const SCOPES = ['https://www.googleapis.com/auth/spreadsheets.readonly'];
 
 const data = {
     tokens: undefined,
-    spreadsheetId: process.env.SPREADSHEET_ID
+    spreadsheetId: process.env.SPREADSHEET_ID,
+    spreadsheetRange: process.env.SPREADSHEET_RANGE,
 }
 
 
@@ -80,6 +81,12 @@ app.get('/set-spreadsheet-id', async(req, res) => {
 
     res.send('Spreadsheet id successfully set to ' + data.spreadsheetId);
 })
+app.get('/set-spreadsheet-range', async(req, res) => {
+    data.spreadsheetRange = req.query['spreadsheet-range']
+    data.spreadsheetRange = decodeURIComponent(data.spreadsheetRange)
+
+    res.send('Spreadsheet range successfully set to ' + data.spreadsheetRange);
+})
 
 app.get('/spreadsheet-data', async(req, res) => {
     try {
@@ -107,23 +114,14 @@ async function readSheet() {
     const sheets = google.sheets({ version: 'v4', auth: oAuth2Client });
 
     try {
-        // Replace 'Sheet1!A1:E10' with your actual range
-        const range = 'BEOSZTÁS!A1:E10';  // Update this as per your sheet's structure
+        const range = data.spreadsheetRange;  // Update this as per your sheet's structure
         const response = await sheets.spreadsheets.values.get({
             spreadsheetId: data.spreadsheetId,
             range: range
         });
 
         // Here we log the rows to the console, you can process them as needed
-        const rows = response.data.values;
-        if (rows.length) {
-            console.log('Data read from spreadsheet:');
-            rows.map((row) => console.log(row.join(', ')));
-        } else {
-            console.log('No data found.');
-        }
-
-        return rows;  // Returning the rows for further processing or output
+        return response.data.values;  // Returning the rows for further processing or output
     } catch (error) {
         console.error('The API returned an error: ' + error);
         throw error;  // Re-throw the error for further handling

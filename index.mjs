@@ -23,6 +23,7 @@ const SCOPES = ['https://www.googleapis.com/auth/spreadsheets.readonly'];
 // Open an authorization URL in the user's browser
 app.get('/auth', (req, res) => {
     const authUrl = oAuth2Client.generateAuthUrl({
+        access_type: 'offline',
         scope: SCOPES,
         client_id: clientId,
         redirect_uri: redirect_uri,
@@ -35,17 +36,27 @@ app.get('/auth', (req, res) => {
 
 // Handle the OAuth2 callback
 app.get('/google-auth-done', async (req, res) => {
-    const { code } = req.query;
-
-    const { tokens } = await oAuth2Client.getToken(code);
-    oAuth2Client.setCredentials(tokens);
-
-    readSheet(); // Read data from the spreadsheet
-    res.send('Authentication successful! your code is ' + code);
+    res.send('<script src="site/google_auth_done.js"></script>');
 });
 
 app.get('/', async (req, res) => {
-    res.send('<a href="/auth"><button>Log in</button></a>')
+    res.send('<a href="/auth"><button>Log in</button></a>');
+})
+
+app.get('/login-error', async (req, res) => {
+    res.send('Could not log in: access denied <br/> <a href="/"><button>Go back</button></a>');
+})
+
+app.get('/login-success', async (req, res) => {
+    res.send('App logged in!');
+})
+
+app.post('/google-auth-access-token', async(req, res) => {
+    const body = req.body
+
+    const accessToken = body['access-token']
+    const tokenType = body['token-type']
+    const expiresIn = body['expires_in']
 })
 
 async function readSheet() {

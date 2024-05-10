@@ -1,7 +1,8 @@
 // Import the necessary modules
-import {google} from 'googleapis';
+import { google } from 'googleapis';
 import express from 'express';
-import {config} from 'dotenv'
+import { config } from 'dotenv'
+import { writeFile, readFileSync, existsSync } from 'fs'
 
 config()
 
@@ -21,12 +22,7 @@ const oAuth2Client = new google.auth.OAuth2(
 const SCOPES = ['https://www.googleapis.com/auth/spreadsheets.readonly'];
 
 
-const data = {
-    tokens: undefined,
-    spreadsheetId: process.env.SPREADSHEET_ID,
-    spreadsheetRange: process.env.SPREADSHEET_RANGE,
-}
-
+const data = readFileToData()
 
 
 // Open an authorization URL in the user's browser
@@ -53,8 +49,10 @@ app.get('/google-auth-done', async (req, res) => {
             accessToken: tokens['access_token'],
             refreshToken: tokens['refresh_token'],
             tokenType: tokens['token_type'],
-            expiryDate: new Date(tokens['expiry_date'])
+            expiryDate: tokens['expiry_date']
         }
+
+        writeDataToFile(data);
 
         res.redirect('/login-success');
     }
@@ -107,8 +105,29 @@ async function readSheet() {
         access_token: data.tokens.accessToken,
         refresh_token: data.tokens.refreshToken,
         token_type: data.tokens.tokenType,
-        expiry_date: data.tokens.expiryDate.getTime()
+        expiry_date: data.tokens.expiryDate
     });
+
+    try{
+        oAuth2Client
+            .refreshAccessToken()
+            .then(res => {
+                const tokens = res.credentials;
+
+                data.tokens = {
+                    accessToken: tokens['access_token'],
+                    refreshToken: tokens['refresh_token'],
+                    tokenType: tokens['token_type'],
+                    expiryDate: tokens['expiry_date']
+                }
+
+                writeDataToFile(data);
+            })
+    }
+    catch (e){
+        console.error('Error while writing token to file:', e)
+    }
+
 
     // Create a Google Sheets API client with the authenticated OAuth2 client
     const sheets = google.sheets({ version: 'v4', auth: oAuth2Client });
@@ -129,4 +148,35 @@ async function readSheet() {
 }
 
 
-app.listen(PORT, () => console.log(`Server running on http://localhost:${PORT}`));
+app.listen(PORT, () => console.log(`Server running`));
+
+`
+{
+    data: [
+        {
+            day: '2024-06-06',
+            cikola: ['nev1', 'nev2', 'nev3'],
+            doborgaz: ['nev1']
+        }
+    ]
+}
+
+`
+
+function writeDataToFile(data){
+    const string = JSON.stringify(data);
+    writeFile(process.env.FILE_TO_SAVE_TOKENS, string, () => {})
+}
+
+function readFileToData() {
+    if(!existsSync(process.env.FILE_TO_SAVE_TOKENS)){
+        return {
+            tokens: undefined,
+            spreadsheetId: process.env.SPREADSHEET_ID,
+            spreadsheetRange: process.env.SPREADSHEET_RANGE,
+        }
+    }
+
+    const string = readFileSync(process.env.FILE_TO_SAVE_TOKENS).toString();
+    return JSON.parse(string);
+}

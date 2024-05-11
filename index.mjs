@@ -87,6 +87,29 @@ app.get('/set-spreadsheet-range', async(req, res) => {
 })
 
 app.get('/spreadsheet-data', async(req, res) => {
+    function generateDummyData(entries) {
+        const data = [];
+
+        for (let i = 0; i < entries; i++) {
+            const dateTimeThing = new Date().getTime() + i * 1000 * 60 * 60 * 24;
+            const date = new Date();
+            date.setTime(dateTimeThing)
+
+            const dateString = date.toISOString().replace(/T.*$/, ''); // Extract only the date part
+            const entry = {
+                date: `${dateString}T22:00:00.000Z`,
+                cikola: ['Zia', 'Kata', 'Somlo'],
+                doborgaz: ['Horvath']
+            };
+            data.push(entry);
+        }
+
+        return data;
+    }
+
+    res.json(generateDummyData(10))
+    return;
+
     try {
         const data = await readSheet();  // Assuming data comes as an array of arrays
         const processed = processSpreadsheetData(data);

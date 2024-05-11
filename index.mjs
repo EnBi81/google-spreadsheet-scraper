@@ -96,6 +96,20 @@ app.get('/spreadsheet-data', async(req, res) => {
     }
 })
 
+app.get('/person-mapping', async(req, res) => {
+    let { from, to } = req.query;
+
+    from = decodeURIComponent(from)
+    to = decodeURIComponent(to)
+
+    data.personMapping[from] = {
+        name: to
+    };
+
+    writeDataToFile(data)
+    res.send(`Person ${from} is set to ${to}`)
+})
+
 async function readSheet() {
     if (!data.tokens || !data.spreadsheetId) {
         throw new Error('Tokens or spreadsheet ID are not set.');
@@ -153,6 +167,7 @@ function processSpreadsheetData(spreadsheetData){
         throw new Error('data is not an array while processing spreadsheet data');
 
     const newDataArr = []
+    const NA = '#N/A';
 
     for(const row of spreadsheetData){
         const date = new Date(row[0])
@@ -166,8 +181,12 @@ function processSpreadsheetData(spreadsheetData){
 
         const mezi_person_count_start = 1;
         for(let i = mezi_person_count_start; i < data.maxPersonCountMezi + mezi_person_count_start; i++){
-            const meziName = row[i];
-            if(meziName)
+            let meziName = row[i];
+
+            if(meziName in data.personMapping)
+                meziName = data.personMapping[meziName].name;
+
+            if(meziName && meziName !== NA)
                 meziNames.push(meziName);
         }
 
@@ -175,8 +194,12 @@ function processSpreadsheetData(spreadsheetData){
 
         const doborgaz_person_count_start = 1 + data.maxPersonCountMezi;
         for (let i = doborgaz_person_count_start; i < data.maxPersonCountDoborgaz + doborgaz_person_count_start; i++) {
-            const doborgazName = row[i];
-            if(doborgazName)
+            let doborgazName = row[i];
+
+            if(doborgazName in data.personMapping)
+                doborgazName = data.personMapping[doborgazName].name
+
+            if(doborgazName && doborgazName !== NA)
                 doborgazNames.push(doborgazName);
         }
 
@@ -217,6 +240,7 @@ function readFileToData() {
         spreadsheetRange: process.env.SPREADSHEET_RANGE,
         maxPersonCountMezi: parseInt(process.env.DATA_MEZI_MAX_PERSON),
         maxPersonCountDoborgaz: parseInt(process.env.DATA_DOBORGAZ_MAX_PERSON),
+        personMapping: {}
     }
 
     if(!existsSync(process.env.FILE_TO_SAVE_TOKENS)){

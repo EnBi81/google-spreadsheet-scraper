@@ -90,6 +90,14 @@ app.get('/spreadsheet-data', async(req, res) => {
     function generateDummyData(entries) {
         const data = [];
 
+        const mockData = [
+            {cikola: ['Zia', 'Kata', 'Somlo'], doborgaz: ['Horvath']},
+            {cikola: ['Zia'], doborgaz: ['Horvath']},
+            {cikola: [], doborgaz: ['Horvath']},
+            {cikola: ['Zia', 'Kata', 'Somlo'], doborgaz: []},
+            {cikola: [], doborgaz: []},
+        ]
+
         for (let i = 0; i < entries; i++) {
             const dateTimeThing = new Date().getTime() + i * 1000 * 60 * 60 * 24;
             const date = new Date();
@@ -97,9 +105,9 @@ app.get('/spreadsheet-data', async(req, res) => {
 
             const dateString = date.toISOString().replace(/T.*$/, ''); // Extract only the date part
             const entry = {
-                date: `${dateString}T22:00:00.000Z`,
-                cikola: ['Zia', 'Kata', 'Somlo'],
-                doborgaz: ['Horvath']
+                date: `${dateString}T00:00:00.000Z`,
+                cikola: mockData[i % mockData.length].cikola,
+                doborgaz: mockData[i % mockData.length].doborgaz
             };
             data.push(entry);
         }

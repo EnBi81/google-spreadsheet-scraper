@@ -57,7 +57,6 @@ app.get('/google-auth-done', async (req, res) => {
         }
 
         writeDataToFile(data);
-
         res.redirect('/login-success');
     }
     catch (e){

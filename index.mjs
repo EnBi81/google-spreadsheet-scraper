@@ -26,7 +26,7 @@ const data = readFileToData();
 const cacheData = {
     data: undefined,
     lastRefreshed: undefined,
-    CACHE_LIFETIME_MINUTES: 6 * 60,
+    CACHE_LIFETIME_MINUTES: 3 * 60,
 }
 
 // Open an authorization URL in the user's browser

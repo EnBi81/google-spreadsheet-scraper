@@ -1,8 +1,8 @@
 // Import the necessary modules
-import { google } from 'googleapis';
+import {google} from 'googleapis';
 import express from 'express';
-import { config } from 'dotenv'
-import { writeFile, readFileSync, existsSync } from 'fs'
+import {config} from 'dotenv'
+import {existsSync, readFileSync, writeFile} from 'fs'
 
 config()
 
@@ -22,8 +22,12 @@ const oAuth2Client = new google.auth.OAuth2(
 const SCOPES = ['https://www.googleapis.com/auth/spreadsheets.readonly'];
 
 
-const data = readFileToData()
-
+const data = readFileToData();
+const cacheData = {
+    data: undefined,
+    lastRefreshed: undefined,
+    CACHE_LIFETIME_MINUTES: 6 * 60,
+}
 
 // Open an authorization URL in the user's browser
 app.get('/auth', (req, res) => {
@@ -87,41 +91,19 @@ app.get('/set-spreadsheet-range', async(req, res) => {
 })
 
 app.get('/spreadsheet-data', async(req, res) => {
-    function generateDummyData(entries) {
-        const data = [];
+    try {
+        let responseData = getCachedData();
 
-        const mockData = [
-            {cikola: ['Zia', 'Kata', 'Somlo'], doborgaz: ['Horvath']},
-            {cikola: ['Zia'], doborgaz: ['Horvath']},
-            {cikola: [], doborgaz: ['Horvath']},
-            {cikola: ['Zia', 'Kata', 'Somlo'], doborgaz: []},
-            {cikola: [], doborgaz: []},
-        ]
+        if(!responseData) {
+            console.log('Accessing Google Spreadsheet ' + new Date().toLocaleDateString())
+            const data = await readSheet();  // Assuming data comes as an array of arrays
+            cacheData.data = processSpreadsheetData(data);
+            cacheData.lastRefreshed = new Date();
 
-        for (let i = 0; i < entries; i++) {
-            const dateTimeThing = new Date().getTime() + i * 1000 * 60 * 60 * 24;
-            const date = new Date();
-            date.setTime(dateTimeThing)
-
-            const dateString = date.toISOString().replace(/T.*$/, ''); // Extract only the date part
-            const entry = {
-                date: `${dateString}T00:00:00.000Z`,
-                cikola: mockData[i % mockData.length].cikola,
-                doborgaz: mockData[i % mockData.length].doborgaz
-            };
-            data.push(entry);
+            responseData = getCachedData();
         }
 
-        return data;
-    }
-
-    res.json(generateDummyData(10))
-    return;
-
-    try {
-        const data = await readSheet();  // Assuming data comes as an array of arrays
-        const processed = processSpreadsheetData(data);
-        res.status(200).json({ data: processed });
+        res.status(200).json({ data: responseData });
     } catch (error) {
         res.status(500).json({ error: 'Failed to read the sheet', details: error.message });
     }
@@ -140,6 +122,33 @@ app.get('/person-mapping', async(req, res) => {
     writeDataToFile(data)
     res.send(`Person ${from} is set to ${to}`)
 })
+
+function getCachedData(){
+    const now = new Date();
+    const nowTime = now.getTime();
+    const cacheRefreshDate = cacheData.lastRefreshed;
+
+    if(!(cacheRefreshDate && cacheRefreshDate instanceof Date))
+        return undefined;
+
+    const cacheLifeTimeMs = now.getTime() - cacheRefreshDate.getTime();
+    if(cacheLifeTimeMs > cacheData.CACHE_LIFETIME_MINUTES * 60 * 1000)
+        return undefined;
+
+    const cachedDataArray = cacheData.data;
+    if(!Array.isArray(cachedDataArray))
+        return undefined;
+
+    return cachedDataArray.filter(d => {
+        const dateTime = Date.parse(d.date);
+        const date = new Date(dateTime);
+        date.setHours(0);
+
+        const MILLI_SECONDS_IN_A_DAY = 24 * 60 * 60 * 1000;
+
+        return date.getTime() + MILLI_SECONDS_IN_A_DAY > nowTime;
+    })
+}
 
 async function readSheet() {
     if (!data.tokens || !data.spreadsheetId) {
@@ -246,18 +255,6 @@ function processSpreadsheetData(spreadsheetData){
 
 app.listen(PORT, () => console.log(`Server running`));
 
-`
-{
-    data: [
-        {
-            day: '2024-06-06',
-            cikola: ['nev1', 'nev2', 'nev3'],
-            doborgaz: ['nev1']
-        }
-    ]
-}
-
-`
 
 function writeDataToFile(data){
     const string = JSON.stringify(data);
@@ -283,4 +280,32 @@ function readFileToData() {
         ...defaultObj,
         ...JSON.parse(string)
     };
+}
+
+function generateDummyData(entries) {
+    const data = [];
+
+    const mockData = [
+        {cikola: ['Zia', 'Kata', 'Somlo'], doborgaz: ['Horvath']},
+        {cikola: ['Zia'], doborgaz: ['Horvath']},
+        {cikola: [], doborgaz: ['Horvath']},
+        {cikola: ['Zia', 'Kata', 'Somlo'], doborgaz: []},
+        {cikola: [], doborgaz: []},
+    ]
+
+    for (let i = 0; i < entries; i++) {
+        const dateTimeThing = new Date().getTime() + i * 1000 * 60 * 60 * 24;
+        const date = new Date();
+        date.setTime(dateTimeThing)
+
+        const dateString = date.toISOString().replace(/T.*$/, ''); // Extract only the date part
+        const entry = {
+            date: `${dateString}T00:00:00.000Z`,
+            cikola: mockData[i % mockData.length].cikola,
+            doborgaz: mockData[i % mockData.length].doborgaz
+        };
+        data.push(entry);
+    }
+
+    return data;
 }

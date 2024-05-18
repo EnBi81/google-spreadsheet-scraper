@@ -225,7 +225,7 @@ function processSpreadsheetData(spreadsheetData){
             if(meziName in data.personMapping)
                 meziName = data.personMapping[meziName].name;
 
-            if(meziName && meziName !== NA)
+            if(meziName && meziName !== NA && /\S/.test(meziName))
                 meziNames.push(meziName);
         }
 
@@ -238,7 +238,7 @@ function processSpreadsheetData(spreadsheetData){
             if(doborgazName in data.personMapping)
                 doborgazName = data.personMapping[doborgazName].name
 
-            if(doborgazName && doborgazName !== NA)
+            if(doborgazName && doborgazName !== NA && /\S/.test(doborgazName))
                 doborgazNames.push(doborgazName);
         }
 

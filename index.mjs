@@ -29,6 +29,10 @@ const cacheData = {
     CACHE_LIFETIME_MINUTES: 3 * 60,
 }
 
+app.get('/', async (req, res) => {
+    res.send('Hello World!');
+})
+
 // Open an authorization URL in the user's browser
 app.get('/auth', (req, res) => {
     const authUrl = oAuth2Client.generateAuthUrl({
@@ -65,7 +69,7 @@ app.get('/google-auth-done', async (req, res) => {
     }
 });
 
-app.get('/', async (req, res) => {
+app.get('/login', async (req, res) => {
     res.send('<a href="/auth"><button>Log in</button></a>');
 })
 
@@ -120,6 +124,16 @@ app.get('/person-mapping', async(req, res) => {
 
     writeDataToFile(data)
     res.send(`Person ${from} is set to ${to}`)
+})
+
+app.get('/set-apk-version', async(req, res) => {
+    let { version } = req.query;
+    data.androidApkVersion = version;
+    writeDataToFile(data);
+    res.send(`Android apk upgraded to version ${version}.`);
+})
+app.get('/apk-version', async (req, res) => {
+    res.send(data.androidApkVersion);
 })
 
 function getCachedData(){
@@ -268,7 +282,8 @@ function readFileToData() {
         spreadsheetRange: process.env.SPREADSHEET_RANGE,
         maxPersonCountMezi: parseInt(process.env.DATA_MEZI_MAX_PERSON),
         maxPersonCountDoborgaz: parseInt(process.env.DATA_DOBORGAZ_MAX_PERSON),
-        personMapping: {}
+        personMapping: {},
+        androidApkVersion: '',
     }
 
     if(!existsSync(process.env.FILE_TO_SAVE_TOKENS)){

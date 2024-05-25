@@ -95,7 +95,16 @@ app.get('/set-spreadsheet-range', async(req, res) => {
 
 app.get('/spreadsheet-data', async(req, res) => {
     try {
-        let responseData = getCachedData();
+        const { tzo } = req.query;
+        let nowDate = new Date();
+
+        const timezoneOffset = parseInt(tzo)
+        if(!isNaN(timezoneOffset)) {
+            const timeZoneDifference = nowDate.getTimezoneOffset() - timezoneOffset;
+            nowDate.setTime(nowDate.getTime() + timeZoneDifference * 60 * 1000);
+        }
+
+        let responseData = getCachedData(nowDate);
 
         if(!responseData) {
             console.log('Accessing Google Spreadsheet ' + new Date().toLocaleDateString())
@@ -103,7 +112,7 @@ app.get('/spreadsheet-data', async(req, res) => {
             cacheData.data = processSpreadsheetData(data);
             cacheData.lastRefreshed = new Date();
 
-            responseData = getCachedData();
+            responseData = getCachedData(nowDate);
         }
 
         res.status(200).json({ data: responseData });
@@ -136,9 +145,9 @@ app.get('/apk-version', async (req, res) => {
     res.send(data.androidApkVersion);
 })
 
-function getCachedData(){
+function getCachedData(dateTimeFrom){
     const now = new Date();
-    const nowTime = now.getTime();
+
     const cacheRefreshDate = cacheData.lastRefreshed;
 
     if(!(cacheRefreshDate && cacheRefreshDate instanceof Date))
@@ -152,6 +161,7 @@ function getCachedData(){
     if(!Array.isArray(cachedDataArray))
         return undefined;
 
+    const fromTime = dateTimeFrom.getTime();
     return cachedDataArray.filter(d => {
         const dateTime = Date.parse(d.date);
         const date = new Date(dateTime);
@@ -159,7 +169,7 @@ function getCachedData(){
 
         const MILLI_SECONDS_IN_A_DAY = 24 * 60 * 60 * 1000;
 
-        return date.getTime() + MILLI_SECONDS_IN_A_DAY > nowTime;
+        return date.getTime() + MILLI_SECONDS_IN_A_DAY > fromTime;
     })
 }
 

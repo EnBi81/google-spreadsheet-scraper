@@ -2,17 +2,12 @@
 import {google} from 'googleapis';
 import express from 'express';
 import {config} from 'dotenv';
-import multer from 'multer';
 import path from 'path';
-import {existsSync, readFileSync, writeFile, rename, mkdirSync, unlinkSync} from 'fs'
+import {existsSync, readFileSync, writeFile, renameSync, unlinkSync} from 'fs'
 
 config()
 
 const app = express();
-const upload = multer({
-    dest: 'uploads/',
-    limits: { fileSize: 100 * 1024 * 1024 }  // Set limit to 100MB
-});
 const PORT = process.env.WEB_APP_PORT;
 
 // Load client secrets from a local file.
@@ -38,87 +33,6 @@ const cacheData = {
 app.get('/', async (req, res) => {
     res.send('Hello World!');
 })
-
-app.post('/upload', upload.single('file'), (req, res) => {
-    /*
-    Summary of what this endpoint does:
-
-    Receives a file upload along with a version query parameter.
-    Validates the presence of the version parameter and the file.
-    Ensures the existence of the necessary directories (uploads and public/apps).
-    Moves the uploaded file to the uploads folder with the name app-latest-release.apk.
-    Checks if a backup file (app-backup-release.apk) exists in the public/apps folder and deletes it if it does.
-    Renames the existing app-latest-release.apk in the public/apps folder to app-backup-release.apk.
-    Moves the newly uploaded file from the uploads folder to the public/apps folder and renames it to app-latest-release.apk.
-    Responds with a success message and logs the successful operation.
-    Updates Version info.
-     */
-
-    const version = req.query.version;  // Get the version from query parameters
-    const file = req.file;  // Get the uploaded file
-
-    // Check if version is provided
-    if (!version) {
-        return res.status(400).send('Version number is required');
-    }
-
-    // Check if file is provided
-    if (!file) {
-        return res.status(400).send('File is required');
-    }
-
-    const uploadsFolderPath = path.join(process.cwd(), 'uploads');  // Path to uploads folder
-    const appsFolderPath = path.join(process.cwd(), 'public', 'apps');  // Path to apps folder
-
-    // Create uploads folder if it doesn't exist
-    if (!existsSync(uploadsFolderPath)) {
-        mkdirSync(uploadsFolderPath, { recursive: true });
-    }
-
-    // Create apps folder if it doesn't exist
-    if (!existsSync(appsFolderPath)) {
-        mkdirSync(appsFolderPath, { recursive: true });
-    }
-
-    const newFilePath = path.join(uploadsFolderPath, 'app-latest-release.apk');  // Path for the new uploaded file
-
-    // Move the uploaded file to the uploads folder with the name "app-latest-release.apk"
-    rename(file.path, newFilePath, (err) => {
-        if (err) {
-            return res.status(500).send('Error saving the file');
-        }
-
-        const backupFilePath = path.join(appsFolderPath, 'app-backup-release.apk');  // Path for the backup file
-
-        // If a backup file exists, delete it
-        if (existsSync(backupFilePath)) {
-            unlinkSync(backupFilePath);
-        }
-
-        const finalFilePath = path.join(appsFolderPath, 'app-latest-release.apk');  // Path for the final destination file
-
-        // Rename the existing "app-latest-release.apk" to "app-backup-release.apk"
-        rename(finalFilePath, backupFilePath, (err) => {
-            if (err && err.code !== 'ENOENT') {  // Ignore error if the file doesn't exist
-                return res.status(500).send('Error creating backup of the file');
-            }
-
-            // Move the new file to the apps folder with the name "app-latest-release.apk"
-            rename(newFilePath, finalFilePath, (err) => {
-                if (err) {
-                    return res.status(500).send('Error moving the file to final destination');
-                }
-
-                data.androidApkVersion = version;
-                writeDataToFile(data);
-                console.log(`Android apk upgraded to version ${version}.`);
-
-                res.status(200).send(`Android apk upgraded to version ${version}.`);
-            });
-        });
-    });
-});
-
 
 // Open an authorization URL in the user's browser
 app.get('/auth', (req, res) => {
@@ -221,6 +135,34 @@ app.get('/person-mapping', async(req, res) => {
     writeDataToFile(data)
     res.send(`Person ${from} is set to ${to}`)
 })
+
+app.post('/update-release', (req, res) => {
+    const appsFolderPath = path.join(process.cwd(), 'public', 'apps');
+    const updatedFilePath = path.join(appsFolderPath, 'app-updated-release.apk');
+    const latestFilePath = path.join(appsFolderPath, 'app-latest-release.apk');
+    const backupFilePath = path.join(appsFolderPath, 'app-backup-release.apk');
+
+    // Check if the updated file exists
+    if (!existsSync(updatedFilePath)) {
+        return res.status(400).send('Updated version does not exist');
+    }
+
+    // Delete the old backup file if it exists
+    if (existsSync(backupFilePath)) {
+        unlinkSync(backupFilePath);
+    }
+
+    // Rename the current latest release to backup
+    if (existsSync(latestFilePath)) {
+        renameSync(latestFilePath, backupFilePath);
+    }
+
+    // Rename the updated release to the latest release
+    renameSync(updatedFilePath, latestFilePath);
+
+    res.status(200).send('File renamed successfully');
+    console.log('Updated file renamed to latest release and old latest release backed up');
+});
 
 app.get('/set-apk-version', async(req, res) => {
     let { version } = req.query;

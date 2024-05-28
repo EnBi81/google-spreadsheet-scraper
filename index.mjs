@@ -169,7 +169,6 @@ app.post('/update-release', (req, res) => {
 
     data.androidApkVersion = version;
     writeDataToFile(data);
-    res.send(`Android apk upgraded to version ${version}.`);
 
     res.status(200).send('File renamed successfully');
     console.log('Updated file renamed to latest release and old latest release backed up');

@@ -9,7 +9,10 @@ import {existsSync, readFileSync, writeFile, rename, mkdirSync, unlinkSync} from
 config()
 
 const app = express();
-const upload = multer({ dest: 'uploads/' });
+const upload = multer({
+    dest: 'uploads/',
+    limits: { fileSize: 100 * 1024 * 1024 }  // Set limit to 100MB
+});
 const PORT = process.env.WEB_APP_PORT;
 
 // Load client secrets from a local file.

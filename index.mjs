@@ -142,6 +142,12 @@ app.post('/update-release', (req, res) => {
     const latestFilePath = path.join(appsFolderPath, 'app-latest-release.apk');
     const backupFilePath = path.join(appsFolderPath, 'app-backup-release.apk');
 
+    let { version } = req.query;
+
+    if(typeof version !== 'string' || version.length === 0){
+        return res.status(400).send('Invalid version: ' + version);
+    }
+
     // Check if the updated file exists
     if (!existsSync(updatedFilePath)) {
         return res.status(400).send('Updated version does not exist');
@@ -159,6 +165,11 @@ app.post('/update-release', (req, res) => {
 
     // Rename the updated release to the latest release
     renameSync(updatedFilePath, latestFilePath);
+
+
+    data.androidApkVersion = version;
+    writeDataToFile(data);
+    res.send(`Android apk upgraded to version ${version}.`);
 
     res.status(200).send('File renamed successfully');
     console.log('Updated file renamed to latest release and old latest release backed up');

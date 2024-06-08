@@ -189,10 +189,12 @@ app.get('/apk-version', async (req, res) => {
     res.send(data.androidApkVersion);
 })
 
-app.get('/location', async(req, res) => {
+/*app.get('/location', async(req, res) => {
     const ip = req.ip;
+    console.log(req.ips)
+    console.log(req.ip)
     const location = await getIpLocation(ip);
-    if (location) {
+    if (location && typeof location.loc === 'string') {
         res.json({
             ip: location.ip,
             latitude: location.loc.split(',')[0],
@@ -212,7 +214,7 @@ const getIpLocation = async (ip) => {
         console.error('Error fetching IP location:', error);
         return null;
     }
-};
+};*/
 
 function getCachedData(dateTimeFrom){
     const now = new Date();

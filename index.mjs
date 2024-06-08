@@ -4,7 +4,7 @@ import express from 'express';
 import {config} from 'dotenv';
 import path from 'path';
 import {existsSync, readFileSync, writeFile, renameSync, unlinkSync} from 'fs'
-import fetch from "node-fetch";
+import axios from 'axios'
 
 config()
 
@@ -202,11 +202,8 @@ app.get('/location', async(req, res) => {
 // Function to get IP location using ipinfo
 const getIpLocation = async (ip) => {
     try {
-        const response = await fetch(`https://ipinfo.io/${ip}/json?token=${process.env.IPINFO_TOKEN}`);
-        if(!response.ok)
-            throw new Error('IP lookup request was not ok.');
-
-        return await response.json();
+        const response = await axios.get(`https://ipinfo.io/${ip}/json?token=${process.env.IPINFO_TOKEN}`);
+        return response.json;
     } catch (error) {
         console.error('Error fetching IP location:', error);
         return null;

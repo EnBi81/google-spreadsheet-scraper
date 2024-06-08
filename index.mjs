@@ -4,6 +4,7 @@ import express from 'express';
 import {config} from 'dotenv';
 import path from 'path';
 import {existsSync, readFileSync, writeFile, renameSync, unlinkSync} from 'fs'
+import fetch from "node-fetch";
 
 config()
 

@@ -193,7 +193,11 @@ app.get('/location', async(req, res) => {
     const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
     const location = await getIpLocation(ip);
     if (location) {
-        res.json(location);
+        res.json({
+            ip: location.ip,
+            latitude: location.loc.split(',')[0],
+            longitude: location.loc.split(',')[1]
+        });
     } else {
         res.status(500).json({ error: 'Could not fetch location' });
     }
@@ -203,7 +207,7 @@ app.get('/location', async(req, res) => {
 const getIpLocation = async (ip) => {
     try {
         const response = await axios.get(`https://ipinfo.io/${ip}/json?token=${process.env.IPINFO_TOKEN}`);
-        return response.json;
+        return response.data;
     } catch (error) {
         console.error('Error fetching IP location:', error);
         return null;

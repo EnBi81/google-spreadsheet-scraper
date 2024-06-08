@@ -23,6 +23,7 @@ jobs:
           echo "FILE_TO_SAVE_TOKENS=${{ secrets.FILE_TO_SAVE_TOKENS }}" >> .env
           echo "DATA_MEZI_MAX_PERSON=${{ secrets.DATA_MEZI_MAX_PERSON }}" >> .env
           echo "DATA_DOBORGAZ_MAX_PERSON=${{ secrets.DATA_DOBORGAZ_MAX_PERSON }}" >> .env
+          echo "IPINFO_TOKEN=${{ secrets.IPINFO_TOKEN }}" >> .env
 
       - name: Remove unnecessary files
         run: |

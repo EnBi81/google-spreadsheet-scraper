@@ -148,6 +148,10 @@ app.post('/update-release', (req, res) => {
         return res.status(400).send('Invalid version: ' + version);
     }
 
+    if(version === data.androidApkVersion){
+        return res.status(400).send('Provided version is the same as the current version');
+    }
+
     // Check if the updated file exists
     if (!existsSync(updatedFilePath)) {
         return res.status(400).send('Updated version does not exist');
@@ -183,6 +187,30 @@ app.get('/set-apk-version', async(req, res) => {
 app.get('/apk-version', async (req, res) => {
     res.send(data.androidApkVersion);
 })
+
+app.get('/location', async(req, res) => {
+    const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
+    const location = await getIpLocation(ip);
+    if (location) {
+        res.json(location);
+    } else {
+        res.status(500).json({ error: 'Could not fetch location' });
+    }
+})
+
+// Function to get IP location using ipinfo
+const getIpLocation = async (ip) => {
+    try {
+        const response = await fetch(`https://ipinfo.io/${ip}/json?token=${process.env.IPINFO_TOKEN}`);
+        if(!response.ok)
+            throw new Error('IP lookup request was not ok.');
+
+        return await response.json();
+    } catch (error) {
+        console.error('Error fetching IP location:', error);
+        return null;
+    }
+};
 
 function getCachedData(dateTimeFrom){
     const now = new Date();

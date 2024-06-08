@@ -190,7 +190,7 @@ app.get('/apk-version', async (req, res) => {
 })
 
 app.get('/location', async(req, res) => {
-    const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
+    const ip = req.socket.remoteAddress;
     const location = await getIpLocation(ip);
     if (location) {
         res.json({
